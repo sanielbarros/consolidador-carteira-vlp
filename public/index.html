@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Proventos de Ações</title>
+<style>
+  body { font-family: system-ui, sans-serif; background: #f4f6f8; margin: 0; color: #222; }
+  main { max-width: 900px; margin: 0 auto; padding: 24px 16px; }
+  h1 { margin-top: 0; }
+  form { display: flex; gap: 8px; margin-bottom: 16px; }
+  input { flex: 1; padding: 10px; font-size: 16px; text-transform: uppercase; border: 1px solid #bbb; border-radius: 6px; }
+  button { padding: 10px 20px; font-size: 16px; border: 0; border-radius: 6px; background: #0b6bcb; color: #fff; cursor: pointer; }
+  .card { background: #fff; border-radius: 8px; padding: 16px; box-shadow: 0 1px 3px rgba(0,0,0,.1); overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; }
+  th, td { padding: 8px 10px; text-align: left; border-bottom: 1px solid #eee; white-space: nowrap; }
+  th { background: #fafafa; }
+  td.num, th.num { text-align: right; }
+  .msg { padding: 12px; }
+  .erro { color: #b00020; }
+  .resumo { margin-bottom: 12px; color: #555; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Proventos pagos</h1>
+  <form id="f">
+    <input id="ticker" value="PETR4" placeholder="Ex.: PETR4" maxlength="12" autofocus>
+    <button type="submit">Buscar</button>
+  </form>
+  <div class="card" id="out"></div>
+</main>
+<script>
+const out = document.getElementById('out');
+const fmtData = s => s ? new Date(s).toLocaleDateString('pt-BR', {timeZone: 'UTC'}) : '-';
+const fmtValor = n => Number(n).toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 8});
+
+async function buscar(ticker) {
+  out.innerHTML = '<div class="msg">Carregando...</div>';
+  try {
+    const r = await fetch('/api/dividendos?symbol=' + encodeURIComponent(ticker));
+    const j = await r.json();
+    if (!r.ok) throw new Error(j.erro || 'Falha na consulta');
+    const lista = (j.cashDividends || []).slice()
+      .sort((a, b) => (b.paymentDate || '').localeCompare(a.paymentDate || ''));
+    if (!lista.length) { out.innerHTML = '<div class="msg">Nenhum provento encontrado para ' + j.symbol + '.</div>'; return; }
+    const total = lista.reduce((s, d) => s + (d.rate || 0), 0);
+    out.innerHTML = '<div class="resumo"><b>' + j.symbol + '</b> — ' + lista.length +
+      ' proventos, total por ação: R$ ' + fmtValor(total) + '</div>' +
+      '<table><thead><tr><th>Tipo</th><th class="num">Valor/ação (R$)</th><th>Data com</th><th>Data ex</th><th>Pagamento</th><th>Aprovado em</th></tr></thead><tbody>' +
+      lista.map(d => '<tr><td>' + (d.label || '-') + '</td><td class="num">' + fmtValor(d.rate) + '</td><td>' +
+        fmtData(d.lastDatePrior) + '</td><td>' + fmtData(d.exDate) + '</td><td>' + fmtData(d.paymentDate) +
+        '</td><td>' + fmtData(d.approvedOn) + '</td></tr>').join('') + '</tbody></table>';
+  } catch (e) {
+    out.innerHTML = '<div class="msg erro">' + e.message + '</div>';
+  }
+}
+
+document.getElementById('f').addEventListener('submit', e => {
+  e.preventDefault();
+  const t = document.getElementById('ticker').value.trim();
+  if (t) buscar(t);
+});
+buscar('PETR4');
+</script>
+</body>
+</html>

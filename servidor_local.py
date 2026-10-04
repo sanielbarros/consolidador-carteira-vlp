@@ -1,4 +1,4 @@
-"""Servidor local para testes: BRAPI_TOKEN=... python app.py -> http://localhost:8000
+"""Servidor local para testes: BRAPI_TOKEN=... python servidor_local.py -> http://localhost:8000
 Em produção (Vercel) quem atende é public/index.html + api/dividendos.py."""
 import os
 from http.server import ThreadingHTTPServer
